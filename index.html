@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- StAuth10244: I Bibi Zulaikha Akbari, 000912329 certify that this material is my original work. 
+    No other person's work has been used without due acknowledgement. I have not made my work available
+    to anyone else. -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <title>Map Application</title>
+</head>
+<body>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            background-color:  lightcyan;
+        }
+
+        #infoImage {
+            display: flex;
+            align-items: center;
+            width: 200px;
+        }
+        h6 {
+            text-align: left;
+        }
+    
+        #map {
+            margin-bottom: 10px;
+            height: 800px;
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+        }
+
+        .filter-buttons {
+            margin-bottom: 20px;
+        }
+
+        .filter-buttons button {
+            margin: 5px;
+        }
+
+        .form-container {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .form-container .form-group {
+            margin-right: 10px;
+        }
+
+        .form-container button {
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .form-container {
+                flex-direction: column;
+            }
+
+            .form-container .form-group {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+            #map {
+                height: 400px;
+            }
+        }
+
+    </style>
+
+    <h2 style="margin-top: 10px;">Bibi Zulaikha Akbari's Map Application</h2>
+    <p><strong>Hamilton's Waterfalls Map</strong></p>
+
+    <div class="filter-buttons">
+        <button class="btn btn-primary" onclick="filterMarkers('Cascade')">Show Cascades</button>
+        <button class="btn btn-primary" onclick="filterMarkers('Waterfall')">Show Waterfalls</button>
+        <button class="btn btn-primary" onclick="filterMarkers('All')">Show All</button>
+        <button class="btn btn-primary" onclick="filterMarkers('Remove')">Remove All</button>
+        <button class="btn btn-primary" onclick="geolocateUser()">Geolocate Me</button>
+    </div>
+
+    <div class="form-container">
+        <form id="markerForm" class="form-inline">
+            <div class="form-group">
+                <label for="markerName">Name:&nbsp;</label>
+                <input type="text" class="form-control" id="markerName" required>
+            </div>
+            <div class="form-group">
+                <label for="markerCommunity">Location:&nbsp;</label>
+                <input type="text" class="form-control" id="markerCommunity" required>
+            </div>
+            <div class="form-group">
+                <label for="markerType">Type:&nbsp;</label>
+                <select class="form-control" id="markerType" required>
+                    <option value="Waterfall">Waterfall</option>
+                    <option value="Cascade">Cascade</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="markerAddress">Address:&nbsp;</label>
+                <input type="text" class="form-control" id="markerAddress" required>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="addMarker()">Add Marker</button>
+        </form>
+    </div>
+
+    <div id="map"></div> <!-- Map will be displayed here -->
+
+    <!-- JavaScript (Bootstrap) -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAb_-elgTUEecdw7wnwFVVXvUrpTBjvVLM&loading=async&callback=initMap&libraries=marker,directions"></script>
+    <script src="waterfall.js"></script>
+    <script>
+        let map;
+        let markers = [];
+        let userMarker = null;
+        let directionsService;
+        let directionsRenderer;
+
+        async function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 43.2387, lng: -79.881 },
+                zoom: 12,
+                mapId: "7c44102c25d2fe1d"
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+
+            const infowindow = new google.maps.InfoWindow();
+
+            for (let i = 0; i < waterfall.features.length; i++) {
+                let new_icon;
+                if (waterfall.features[i].properties.TYPE == "Waterfall") {
+                    new_icon = "https://maps.google.com/mapfiles/kml/paddle/pink-blank.png";
+                } else if (waterfall.features[i].properties.TYPE == "Cascade") {
+                    new_icon = "https://maps.google.com/mapfiles/kml/paddle/blu-blank.png";
+                } else {
+                    new_icon = "https://maps.google.com/mapfiles/kml/paddle/grn-blank.png";
+                }
+
+                const new_marker = new google.maps.Marker({
+                    map: map,
+                    position: {
+                        lat: waterfall.features[i].geometry.coordinates[1],
+                        lng: waterfall.features[i].geometry.coordinates[0]
+                    },
+                    title: waterfall.features[i].properties.NAME,
+                    icon: new_icon
+                });
+
+                new_marker.NAME = waterfall.features[i].properties.NAME;
+                new_marker.COMMUNITY = waterfall.features[i].properties.COMMUNITY;
+                new_marker.TYPE = waterfall.features[i].properties.TYPE;
+
+                new_marker.addListener("click", function() {
+                    const typeLogo = this.TYPE === "Waterfall" ? "images/waterfallLogo.jpg" : "images/cascadeLogo.jpg";
+                    infowindow.close();
+                    infowindow.setContent("<div style='width: 200px;'><br /><div id='infoImage'><img src='" + typeLogo + "' width='100px' height='100px' alt='" + this.TYPE + " image' style='margin-right: 10px;'></div><br /><h6 style='font-size: 12px; margin: 2px 0;'>Name: " + this.NAME + "</h6>" + 
+                                          "<h6 style='font-size: 12px; margin: 2px 0;'>City: " + this.COMMUNITY + "</h6>" + 
+                                          "<h6 style='font-size: 12px; margin: 2px 0;'>Type: " + this.TYPE + "</h6>" + 
+                                          "<button onclick='getDirections(\"" + this.position.lat() + "\", \"" + this.position.lng() + "\")'>Get Directions</button></div>");
+                    infowindow.open(map, this);
+                });
+                markers.push(new_marker);
+            }
+        }
+
+        function filterMarkers(type) {
+            for (let i = 0; i < markers.length; i++) {
+                if (markers[i].TYPE == type || type == "All") {
+                    markers[i].setMap(map);
+                } else {
+                    markers[i].setMap(null);
+                }
+            }
+        }
+
+        function geolocateUser() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const userLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    if (userMarker) {
+                        userMarker.setMap(null);
+                    }
+                    userMarker = new google.maps.Marker({
+                        position: userLocation,
+                        map: map,
+                        title: "Your Location",
+                        icon: "https://maps.google.com/mapfiles/kml/pal2/icon2.png"    // user location icon
+                    });
+                    map.setCenter(userLocation);
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function addMarker() {
+            const name = document.getElementById("markerName").value;
+            const community = document.getElementById("markerCommunity").value;
+            const type = document.getElementById("markerType").value;
+            const address = document.getElementById("markerAddress").value;
+
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ 'address': address }, function(results, status) {
+                if (status === 'OK') {
+                    const new_marker = new google.maps.Marker({
+                        map: map,
+                        position: results[0].geometry.location,
+                        title: name,
+                        icon: type === "Waterfall" ? "https://maps.google.com/mapfiles/kml/paddle/pink-blank.png" : "https://maps.google.com/mapfiles/kml/paddle/blu-blank.png"
+                    });
+
+                    new_marker.NAME = name;
+                    new_marker.COMMUNITY = community;
+                    new_marker.TYPE = type;
+
+                    const infowindow = new google.maps.InfoWindow();
+                    new_marker.addListener("click", function() {
+                        const typeLogo = this.TYPE === "Waterfall" ? "images/waterfallLogo.jpg" : "images/cascadeLogo.jpg";
+                        infowindow.close();
+                        infowindow.setContent("<div style='width: 200px;'><br /><div id='infoImage'><img src='" + typeLogo + "' width='100px' height='100px' alt='" + this.TYPE + " image' style='margin-right: 10px;'></div><br /><h6 style='font-size: 12px; margin: 2px 0;'>Name: " + this.NAME + "</h6>" + 
+                                              "<h6 style='font-size: 12px; margin: 2px 0;'>City: " + this.COMMUNITY + "</h6>" + 
+                                              "<h6 style='font-size: 12px; margin: 2px 0;'>Type: " + this.TYPE + "</h6>" + 
+                                              "<button onclick='getDirections(\"" + this.position.lat() + "\", \"" + this.position.lng() + "\")'>Get Directions</button></div>");
+                        infowindow.open(map, this);
+                    });
+
+                    markers.push(new_marker);
+                    map.setCenter(results[0].geometry.location);
+                } else {
+                    alert("Geocode was not successful for the following reason: " + status);
+                }
+            });
+        }
+
+        function getDirections(lat, lng) {
+            if (!userMarker) {
+                alert("Please geolocate yourself first.");
+                return;
+            }
+
+            const request = {
+                origin: userMarker.getPosition(),
+                destination: { lat: parseFloat(lat), lng: parseFloat(lng) },
+                travelMode: 'DRIVING'
+            };
+
+            directionsService.route(request, function(result, status) {
+                if (status == 'OK') {
+                    directionsRenderer.setDirections(result);
+                } else {
+                    alert("Directions request failed due to " + status);
+                }
+            });
+        }
+    </script>
+
+<footer>
+    <p>Created by: <a href="mailto:bibi-zulaikha.akbari@mohawkcollege.ca">Bibi Zulaikha Akbari</a>, 000912329 - Mohawk College</p>
+</footer>
+</body>
+</html>
